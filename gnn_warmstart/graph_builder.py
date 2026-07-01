@@ -22,13 +22,16 @@ _SENSE_MAP = {'<': 0, '>': 1, '=': 2}  # LE, GE, EQ
 
 
 def _safe_normalize(values, scale=None):
-    """归一化到 [-1, 1] 或按给定 scale 缩放，避免除零"""
+    """归一化，处理 inf 和除零"""
     arr = np.asarray(values, dtype=np.float32)
+    finite = np.isfinite(arr)
     if scale is None:
-        scale = np.max(np.abs(arr))
+        finite_vals = arr[finite]
+        scale = float(np.max(np.abs(finite_vals))) if len(finite_vals) > 0 else 1.0
     if scale < 1e-8:
         return arr, 1.0
-    return arr / scale, scale
+    result = np.where(finite, arr / scale, np.sign(arr))
+    return result, scale
 
 
 def _one_hot(values, mapping, num_classes):
