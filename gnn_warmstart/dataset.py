@@ -62,16 +62,28 @@ class MTSPDataset(Dataset):
         with open(file_path, 'rb') as f:
             data = pickle.load(f)
 
-        solution = data['solution']
+        solution = data.get('solution', {})
+        status = solution.get('status', 'UNKNOWN')
 
-        if solution.get('status') in ('ERROR',):
+        if status == 'ERROR':
+            err_detail = solution.get('error', 'no detail')
+            print(f"[SKIP] {fname}: status=ERROR, reason={err_detail}")
+            return _empty_graph()
+
+        if status in ('TIME_LIMIT_NO_SOL', 'INFEASIBLE'):
+            print(f"[SKIP] {fname}: status={status}, 无可用解")
+            return _empty_graph()
+
+        mi = solution.get('model_info', {})
+        if not mi or mi.get('num_vars', 0) == 0:
+            print(f"[SKIP] {fname}: model_info 缺失或 num_vars=0, keys={list(mi.keys())[:5]}")
             return _empty_graph()
 
         try:
             graph = milp_to_graph(solution)
         except Exception as e:
             import traceback
-            print(f"[WARNING] 构建图失败 {fname}: {e}")
+            print(f"[FAIL] {fname}: {e}")
             traceback.print_exc()
             return _empty_graph()
 
