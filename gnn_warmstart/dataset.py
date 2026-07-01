@@ -4,7 +4,22 @@
 import os
 import pickle
 import torch
-from torch_geometric.data import Dataset
+from torch_geometric.data import Dataset, Data
+
+
+def _empty_graph():
+    """构造一个有效的空 Data 对象，训练时会被 collate_fn 过滤"""
+    g = Data()
+    g.num_nodes = 0
+    g.num_vars = 0
+    g.x = torch.zeros(0, 7)
+    g.edge_index = torch.zeros(2, 0, dtype=torch.long)
+    g.edge_attr = torch.zeros(0, 1)
+    g.y = torch.zeros(0)
+    g.var_mask = torch.zeros(0, dtype=torch.bool)
+    g.var_names = []
+    return g
+
 
 from graph_builder import milp_to_graph
 
@@ -67,17 +82,7 @@ class MTSPDataset(Dataset):
 
         # 跳过求解失败的实例
         if solution.get('status') in ('ERROR',):
-            # 返回一个占位图
-            graph = type('DummyGraph', (), {})()
-            graph.num_nodes = 0
-            graph.num_vars = 0
-            graph.x = torch.zeros(0, 7)
-            graph.edge_index = torch.zeros(2, 0, dtype=torch.long)
-            graph.edge_attr = torch.zeros(0, 1)
-            graph.y = torch.zeros(0)
-            graph.var_mask = torch.zeros(0, dtype=torch.bool)
-            graph.var_names = []
-            return graph
+            return _empty_graph()
 
         try:
             graph = milp_to_graph(solution)
@@ -85,16 +90,7 @@ class MTSPDataset(Dataset):
             import traceback
             print(f"[WARNING] 构建图失败 {fname}: {e}")
             traceback.print_exc()
-            graph = type('DummyGraph', (), {})()
-            graph.num_nodes = 0
-            graph.num_vars = 0
-            graph.x = torch.zeros(0, 7)
-            graph.edge_index = torch.zeros(2, 0, dtype=torch.long)
-            graph.edge_attr = torch.zeros(0, 1)
-            graph.y = torch.zeros(0)
-            graph.var_mask = torch.zeros(0, dtype=torch.bool)
-            graph.var_names = []
-        return graph
+            return _empty_graph()
 
 
 def collate_filter_empty(batch):
