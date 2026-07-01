@@ -1,29 +1,20 @@
 """
 训练脚本：二分类 BCE 损失，只对 x 变量计算
+逐图训练，梯度累积，避免 DataLoader 兼容性问题
 """
 import os
+import random
 import torch
 import torch.nn as nn
 from torch.utils.data import Subset
-from torch_geometric.loader import DataLoader
-from tqdm import tqdm
 
 from config import *
-from dataset import MTSPDataset, collate_filter_empty, split_dataset
+from dataset import MTSPDataset, split_dataset
 from gnn_model import WarmStartGNN
 
 
 def compute_loss_and_metrics(logits, data, loss_fn):
-    """
-    计算损失和指标（只在标记为目标的变量上）
-
-    Args:
-        logits: [V] 模型输出的 logits
-        data: PyG Data/Batch 对象
-        loss_fn: BCEWithLogitsLoss
-    Returns:
-        loss, acc, precision, recall
-    """
+    """计算损失和指标（只在标记为目标的变量上）"""
     mask = data.var_mask
     if mask.sum() == 0:
         return torch.tensor(0.0, device=logits.device), 0.0, 0.0, 0.0
@@ -48,25 +39,28 @@ def compute_loss_and_metrics(logits, data, loss_fn):
     return loss, acc, precision, recall
 
 
-def train_epoch(model, loader, optimizer, loss_fn, device, grad_accum=1):
-    """训练一个 epoch（支持梯度累积）"""
+def train_one_epoch(model, indices, dataset, optimizer, loss_fn, device, grad_accum):
+    """逐图训练一个 epoch，支持梯度累积"""
     model.train()
     total_loss, total_acc, total_prec, total_recall = 0.0, 0.0, 0.0, 0.0
     count = 0
     optimizer.zero_grad()
 
-    for step, batch in enumerate(loader):
-        if batch is None or batch.num_vars == 0:
-            continue
-        batch = batch.to(device)
+    random.shuffle(indices)
 
-        logits = model(batch)
-        loss, acc, prec, recall = compute_loss_and_metrics(logits, batch, loss_fn)
-        loss = loss / grad_accum  # 梯度累积时缩小 loss
+    for step, idx in enumerate(indices):
+        graph = dataset[idx]
+        if graph.num_vars == 0:
+            continue
+        graph = graph.to(device)
+
+        logits = model(graph)
+        loss, acc, prec, recall = compute_loss_and_metrics(logits, graph, loss_fn)
+        loss = loss / grad_accum
 
         loss.backward()
 
-        total_loss += loss.item() * grad_accum  # 还原原始 loss
+        total_loss += loss.item() * grad_accum
         total_acc += acc
         total_prec += prec
         total_recall += recall
@@ -76,7 +70,6 @@ def train_epoch(model, loader, optimizer, loss_fn, device, grad_accum=1):
             optimizer.step()
             optimizer.zero_grad()
 
-    # 处理最后未更新的累积梯度
     if count % grad_accum != 0:
         optimizer.step()
         optimizer.zero_grad()
@@ -87,18 +80,20 @@ def train_epoch(model, loader, optimizer, loss_fn, device, grad_accum=1):
 
 
 @torch.no_grad()
-def eval_epoch(model, loader, loss_fn, device):
-    """评估一个 epoch"""
+def eval_set(model, indices, dataset, loss_fn, device):
+    """逐图评估"""
     model.eval()
     total_loss, total_acc, total_prec, total_recall = 0.0, 0.0, 0.0, 0.0
     count = 0
 
-    for batch in loader:
-        if batch is None or batch.num_vars == 0:
+    for idx in indices:
+        graph = dataset[idx]
+        if graph.num_vars == 0:
             continue
-        batch = batch.to(device)
-        logits = model(batch)
-        loss, acc, prec, recall = compute_loss_and_metrics(logits, batch, loss_fn)
+        graph = graph.to(device)
+
+        logits = model(graph)
+        loss, acc, prec, recall = compute_loss_and_metrics(logits, graph, loss_fn)
 
         total_loss += loss.item()
         total_acc += acc
@@ -112,16 +107,7 @@ def eval_epoch(model, loader, loss_fn, device):
 
 
 def train(data_dir=None, output_dir=None, device=None):
-    """
-    完整训练流程
-
-    Args:
-        data_dir: 训练数据目录
-        output_dir: 模型保存目录
-        device: 训练设备
-    Returns:
-        model: 训练好的模型
-    """
+    """完整训练流程"""
     if data_dir is None:
         data_dir = TRAIN_DATA_DIR
     if output_dir is None:
@@ -134,30 +120,24 @@ def train(data_dir=None, output_dir=None, device=None):
     # 加载数据集
     print(f"加载数据集: {data_dir}")
     dataset = MTSPDataset(data_dir)
-    print(f"  有效样本数: {len(dataset)}")
+    print(f"  文件数: {len(dataset)}")
+
+    # 统计有效图
+    valid_count = 0
+    for i in range(len(dataset)):
+        if dataset[i].num_vars > 0:
+            valid_count += 1
+    print(f"  有效图: {valid_count} / {len(dataset)}")
+
+    if valid_count == 0:
+        print("错误: 没有有效图，请检查数据文件和 graph_builder")
+        return None
 
     # 划分训练/验证/测试
     train_idx, val_idx, test_idx = split_dataset(
         dataset, TRAIN_RATIO, VAL_RATIO
     )
     print(f"  训练: {len(train_idx)}, 验证: {len(val_idx)}, 测试: {len(test_idx)}")
-
-    train_set = Subset(dataset, train_idx)
-    val_set = Subset(dataset, val_idx)
-    test_set = Subset(dataset, test_idx)
-
-    train_loader = DataLoader(
-        train_set, batch_size=BATCH_SIZE, shuffle=True,
-        num_workers=NUM_WORKERS, collate_fn=collate_filter_empty,
-    )
-    val_loader = DataLoader(
-        val_set, batch_size=BATCH_SIZE, shuffle=False,
-        num_workers=NUM_WORKERS, collate_fn=collate_filter_empty,
-    )
-    test_loader = DataLoader(
-        test_set, batch_size=BATCH_SIZE, shuffle=False,
-        num_workers=NUM_WORKERS, collate_fn=collate_filter_empty,
-    )
 
     # 创建模型
     model = WarmStartGNN(
@@ -169,7 +149,6 @@ def train(data_dir=None, output_dir=None, device=None):
     optimizer = torch.optim.Adam(
         model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY
     )
-    # 使用 pos_weight 处理正负样本不均衡
     loss_fn = nn.BCEWithLogitsLoss()
 
     # 训练循环
@@ -177,37 +156,35 @@ def train(data_dir=None, output_dir=None, device=None):
     best_epoch = 0
 
     for epoch in range(1, NUM_EPOCHS + 1):
-        train_loss, train_acc, train_prec, train_recall = train_epoch(
-            model, train_loader, optimizer, loss_fn, device, GRAD_ACCUM_STEPS
+        train_loss, train_acc, train_prec, train_recall = train_one_epoch(
+            model, train_idx, dataset, optimizer, loss_fn, device, GRAD_ACCUM_STEPS
         )
-        val_loss, val_acc, val_prec, val_recall = eval_epoch(
-            model, val_loader, loss_fn, device
+        val_loss, val_acc, val_prec, val_recall = eval_set(
+            model, val_idx, dataset, loss_fn, device
         )
 
-        # 输出进度
         print(f"Epoch {epoch:3d}/{NUM_EPOCHS} | "
               f"Train Loss: {train_loss:.4f} Acc: {train_acc:.4f} | "
               f"Val Loss: {val_loss:.4f} Acc: {val_acc:.4f}")
 
-        # 保存最佳模型
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_epoch = epoch
             torch.save(model.state_dict(),
                        os.path.join(output_dir, "best_model.pt"))
 
-    # 加载最佳模型并在测试集上评估
+    # 测试集评估
     print(f"\n最佳模型: Epoch {best_epoch}, Val Loss: {best_val_loss:.4f}")
     model.load_state_dict(torch.load(
         os.path.join(output_dir, "best_model.pt"), weights_only=True
     ))
-    test_loss, test_acc, test_prec, test_recall = eval_epoch(
-        model, test_loader, loss_fn, device
+    test_loss, test_acc, test_prec, test_recall = eval_set(
+        model, test_idx, dataset, loss_fn, device
     )
     print(f"测试集 | Loss: {test_loss:.4f} Acc: {test_acc:.4f} "
           f"Prec: {test_prec:.4f} Rec: {test_recall:.4f}")
 
-    # 保存最终模型
+    # 保存模型
     torch.save({
         'model_state_dict': model.state_dict(),
         'config': {
