@@ -14,7 +14,7 @@ from gnn_model import WarmStartGNN
 
 
 def compute_loss_and_metrics(logits, data, loss_fn):
-    """计算损失和指标（只在标记为目标的变量上）"""
+    """计算损失和指标（只在标记为目标的变量上），自动加权正样本"""
     mask = data.var_mask
     if mask.sum() == 0:
         return torch.tensor(0.0, device=logits.device), 0.0, 0.0, 0.0
@@ -22,7 +22,15 @@ def compute_loss_and_metrics(logits, data, loss_fn):
     targets = data.y[mask]
     outputs = logits[mask]
 
-    loss = loss_fn(outputs, targets)
+    # 计算正样本权重，解决类别不平衡（正样本占比通常 < 10%）
+    pos = targets.sum().item()
+    neg = (targets == 0).sum().item()
+    if pos > 0 and neg > 0:
+        weight = torch.tensor([neg / pos], device=outputs.device)
+        loss = nn.functional.binary_cross_entropy_with_logits(
+            outputs, targets, pos_weight=weight)
+    else:
+        loss = loss_fn(outputs, targets)
 
     with torch.no_grad():
         preds = (torch.sigmoid(outputs) > 0.5).float()
