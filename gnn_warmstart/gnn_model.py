@@ -51,6 +51,7 @@ class BipartiteConv(nn.Module):
         """
         V = h_v.size(0)
         C = h_c.size(0)
+        D = h_v.size(1)
 
         # 将约束的全局索引映射回局部 0..C-1
         dst_local = edge_index_v2c[1] - V   # V+C-1 → C-1
