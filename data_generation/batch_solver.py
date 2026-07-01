@@ -113,6 +113,12 @@ def _solve_single_instance(args):
         var_types = [v.VType for v in all_vars]
         var_lb = [float(v.LB) for v in all_vars]
         var_ub = [float(v.UB) for v in all_vars]
+        var_obj = [float(v.Obj) for v in all_vars]
+
+        # 约束元信息：RHS 和 sense（用于 GNN 图构建）
+        all_constrs = model.getConstrs()
+        constr_rhs = [float(c.RHS) for c in all_constrs]
+        constr_sense = [c.Sense for c in all_constrs]
 
         # 约束统计
         num_linear_constrs = model.NumConstrs
@@ -136,6 +142,9 @@ def _solve_single_instance(args):
                 'var_types': var_types,
                 'var_lb': var_lb,
                 'var_ub': var_ub,
+                'var_obj': var_obj,
+                'constr_rhs': constr_rhs,
+                'constr_sense': constr_sense,
             },
             'constraint_matrix': constraint_matrix,
         }
