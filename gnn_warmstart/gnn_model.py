@@ -42,40 +42,39 @@ class BipartiteConv(nn.Module):
     def forward(self, h_v, h_c, edge_index_v2c, edge_attr):
         """
         Args:
-            h_v: [V, D] 变量节点嵌入
-            h_c: [C, D] 约束节点嵌入
-            edge_index_v2c: [2, E] 边索引 (src=var, dst=constr)
-            edge_attr: [E, 1] 边特征（系数值）
+            h_v: [V, D] 变量节点嵌入 (局部索引 0..V-1)
+            h_c: [C, D] 约束节点嵌入 (局部索引 0..C-1)
+            edge_index_v2c: [2, E] 边索引，src=变量(全局0..V-1)，dst=约束(全局V..V+C-1)
+            edge_attr: [E, 1] 边特征
         Returns:
-            h_v_new: [V, D]
-            h_c_new: [C, D]
+            h_v_new: [V, D], h_c_new: [C, D]
         """
         V = h_v.size(0)
         C = h_c.size(0)
-        D = h_v.size(1)
+
+        # 将约束的全局索引映射回局部 0..C-1
+        dst_local = edge_index_v2c[1] - V   # V+C-1 → C-1
 
         # ——— V → C ———
-        src_v = h_v[edge_index_v2c[0]]                      # [E, D]
-        msg_input = torch.cat([src_v, edge_attr], dim=-1)   # [E, D+1]
-        msgs = self.msg_v2c(msg_input)                       # [E, D]
+        src_v = h_v[edge_index_v2c[0]]                        # [E, D]  src 已是 0..V-1
+        msg_input = torch.cat([src_v, edge_attr], dim=-1)     # [E, D+1]
+        msgs = self.msg_v2c(msg_input)                         # [E, D]
 
-        # 按目标约束节点 scatter_sum
         agg_c = torch.zeros(C, D, device=h_c.device)
-        dst_idx = edge_index_v2c[1].unsqueeze(-1).expand(-1, D)
-        agg_c = agg_c.scatter_add(0, dst_idx, msgs)
+        idx = dst_local.unsqueeze(-1).expand(-1, D)
+        agg_c = agg_c.scatter_add(0, idx, msgs)
 
         h_c_new = self.upd_c(torch.cat([h_c, agg_c], dim=-1))  # [C, D]
 
         # ——— C → V ———
-        # 边索引翻转: 原 dst(约束) → 新 src, 原 src(变量) → 新 dst
-        edge_index_c2v = edge_index_v2c.flip(0)
-        src_c = h_c_new[edge_index_c2v[0]]                   # [E, D]
+        # 翻转边：局部约束索引(0..C-1)→src, 变量索引(0..V-1)→dst
+        src_c = h_c_new[dst_local]                             # [E, D]
         msg_input = torch.cat([src_c, edge_attr], dim=-1)
-        msgs = self.msg_c2v(msg_input)                        # [E, D]
+        msgs = self.msg_c2v(msg_input)                          # [E, D]
 
         agg_v = torch.zeros(V, D, device=h_v.device)
-        dst_idx = edge_index_c2v[1].unsqueeze(-1).expand(-1, D)
-        agg_v = agg_v.scatter_add(0, dst_idx, msgs)
+        idx = edge_index_v2c[0].unsqueeze(-1).expand(-1, D)   # 变量已在 0..V-1
+        agg_v = agg_v.scatter_add(0, idx, msgs)
 
         h_v_new = self.upd_v(torch.cat([h_v, agg_v], dim=-1))  # [V, D]
 
