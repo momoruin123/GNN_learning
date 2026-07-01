@@ -4,7 +4,10 @@
 import os
 import pickle
 import torch
-from torch_geometric.data import Dataset, Data
+from torch.utils.data import Dataset
+from torch_geometric.data import Data, Batch
+
+from graph_builder import milp_to_graph
 
 
 def _empty_graph():
@@ -21,9 +24,6 @@ def _empty_graph():
     return g
 
 
-from graph_builder import milp_to_graph
-
-
 class MTSPDataset(Dataset):
     """
     MTSP MILP 图数据集
@@ -34,28 +34,12 @@ class MTSPDataset(Dataset):
     Args:
         data_dir: .pkl 文件所在目录
         file_list: 指定要加载的文件名列表（None 则加载目录中所有 .pkl）
-        transform: PyG 变换（可选）
     """
 
-    def __init__(self, data_dir, file_list=None, transform=None):
+    def __init__(self, data_dir, file_list=None):
         self.data_dir = data_dir
         self._file_list = file_list
-        self._cached_files = None  # 缓存文件列表
-        super().__init__(root=None, transform=transform)
-
-    @property
-    def raw_file_names(self):
-        return []
-
-    @property
-    def processed_file_names(self):
-        return []
-
-    def download(self):
-        pass
-
-    def process(self):
-        pass
+        self._cached_files = None
 
     def _get_file_list(self):
         if self._cached_files is None:
@@ -67,10 +51,10 @@ class MTSPDataset(Dataset):
                 )
         return self._cached_files
 
-    def len(self):
+    def __len__(self):
         return len(self._get_file_list())
 
-    def get(self, idx):
+    def __getitem__(self, idx):
         files = self._get_file_list()
         fname = files[idx]
 
@@ -80,7 +64,6 @@ class MTSPDataset(Dataset):
 
         solution = data['solution']
 
-        # 跳过求解失败的实例
         if solution.get('status') in ('ERROR',):
             return _empty_graph()
 
@@ -92,13 +75,14 @@ class MTSPDataset(Dataset):
             traceback.print_exc()
             return _empty_graph()
 
+        return graph
+
 
 def collate_filter_empty(batch):
     """过滤掉空图的 batch 整理函数"""
     valid = [d for d in batch if d.num_vars > 0]
     if len(valid) == 0:
         return None
-    from torch_geometric.data import Batch
     return Batch.from_data_list(valid)
 
 
