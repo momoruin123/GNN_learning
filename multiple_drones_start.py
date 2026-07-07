@@ -1,5 +1,5 @@
 """
-对比三种 MIPStart：冷启动 / 最优解 / 烂解（单机跑全部）
+对比三种 MIPStart: 冷启动 / 最优解 / 烂解（单机跑全部）
 """
 import time
 import numpy as np
