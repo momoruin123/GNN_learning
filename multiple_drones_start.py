@@ -130,9 +130,12 @@ for d in range(NUM_UAV):
                 x3[d, i, j].Start = 0.0
 
 # d=0: 0→1→2→...→n-1→0
+n_set = 0
 for k in range(1, n):
     x3[0, k - 1, k].Start = 1.0
+    n_set += 1
 x3[0, n - 1, 0].Start = 1.0
+n_set += 1
 
 # d=1,d=2: 各挑离基地最近的一个未分配点
 dist_from_base = sorted([(i, dist[0][i]) for i in range(1, n)], key=lambda v: v[1])
@@ -140,9 +143,7 @@ for idx, d in enumerate([1, 2]):
     node = dist_from_base[idx][0]
     x3[d, 0, node].Start = 1.0
     x3[d, node, 0].Start = 1.0
-
-n_set = sum(1 for d in range(NUM_UAV) for i in range(n)
-            for j in range(n) if i != j and x3[d, i, j].Start > 0.5)
+    n_set += 2
 print(f"【烂解 MIPStart】设置了 {n_set} 个变量 = 1")
 print(f"  d=0: 基地 → P1 → P2 → ... → P{len(PATROL_POINTS)} → 基地")
 print(f"  d=1: 基地 → P{dist_from_base[0][0]} → 基地")
