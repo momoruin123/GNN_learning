@@ -14,9 +14,11 @@ BASE = np.array([0.0, 0.0])
 PATROL_POINTS = np.array([
     [51.0, 92.0], [14.0, 71.0], [60.0, 20.0], [82.0, 86.0], [74.0, 74.0],
     [87.0, 99.0], [23.0, 2.0],  [21.0, 52.0], [1.0, 87.0],  [29.0, 37.0],
+    [45.0, 55.0], [68.0, 10.0], [90.0, 45.0], [33.0, 80.0], [55.0, 15.0],
+    [77.0, 66.0], [12.0, 33.0], [40.0, 70.0], [88.0, 12.0], [95.0, 70.0],
 ])
-NUM_UAV = 3
-MAX_ENERGY = 300
+NUM_UAV = 4
+MAX_ENERGY = 600
 
 points = np.vstack([BASE, PATROL_POINTS])
 n = len(points)
@@ -137,17 +139,19 @@ for k in range(1, n):
 x3[0, n - 1, 0].Start = 1.0
 n_set += 1
 
-# d=1,d=2: 各挑离基地最近的一个未分配点
+# d=1,d=2: 捡 d=0 路线最远一段的两端，故意制造超大 makespan
+# d=0 已经覆盖了全部巡逻点，d=1,d=2 再重复指过去（Gurobi 会自己修正）
 dist_from_base = sorted([(i, dist[0][i]) for i in range(1, n)], key=lambda v: v[1])
-for idx, d in enumerate([1, 2]):
-    node = dist_from_base[idx][0]
+far_node = dist_from_base[-1][0]   # 离基地最远的点
+far2_node = dist_from_base[-2][0]  # 次远的点
+for d, node in [(1, far_node), (2, far2_node)]:
     x3[d, 0, node].Start = 1.0
     x3[d, node, 0].Start = 1.0
     n_set += 2
 print(f"【烂解 MIPStart】设置了 {n_set} 个变量 = 1")
 print(f"  d=0: 基地 → P1 → P2 → ... → P{len(PATROL_POINTS)} → 基地")
-print(f"  d=1: 基地 → P{dist_from_base[0][0]} → 基地")
-print(f"  d=2: 基地 → P{dist_from_base[1][0]} → 基地")
+print(f"  d=1: 基地 → P{far_node}（最远点） → 基地")
+print(f"  d=2: 基地 → P{far2_node}（次远点） → 基地")
 t3, obj3 = do_solve(m3, "烂解作 MIPStart")
 m3.dispose()
 
