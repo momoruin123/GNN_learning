@@ -69,49 +69,41 @@ def extract_milp_structure(model):
     }
 
 
-def set_mip_start_from_predictions(model, var_names, predictions):
+def set_mip_start_from_predictions(model, var_names, probs, num_patrol, num_uav):
     """
-    将 GNN 预测值设置为 Gurobi MIPStart
+    将 GNN 预测概率转为 MIPStart：取概率最高的 top-K 个 x 变量设为 1
 
-    Args:
-        model: gurobipy.Model
-        var_names: 变量名列表（与 predictions 顺序一致）
-        predictions: [V] 二值预测数组（0/1）
+    K = num_patrol + 2*num_uav  （巡逻点入边 + 每架 UAV 的出发/返回边）
     """
     all_vars = model.getVars()
-
-    # 构造变量名 → 变量的映射
     var_dict = {v.VarName: v for v in all_vars}
 
+    # 只收集 x 变量的概率
+    x_probs = []  # (prob, var_name)
+    for name, prob in zip(var_names, probs):
+        if name.startswith('x['):
+            x_probs.append((prob, name))
+
+    # 降序排列，取 top K
+    x_probs.sort(key=lambda v: v[0], reverse=True)
+    K = min(num_patrol + 2 * num_uav, len(x_probs))
+
     num_set = 0
-    for name, pred_val in zip(var_names, predictions):
-        if int(pred_val) == 0:
-            continue
-        # 只对 x 变量设 Start（GNN 只训练了这些）
-        if not name.startswith('x['):
-            continue
+    for prob, name in x_probs[:K]:
         if name in var_dict:
             var_dict[name].Start = 1.0
             num_set += 1
 
-    print(f"  MIPStart 设置: {num_set} 个变量 = 1")
+    print(f"  MIPStart 设置: {num_set} 个变量 = 1 (top {K} / {len(x_probs)} x 变量)")
 
 
-def solve_with_warmstart(model, var_names, predictions, time_limit=60, verbose=False):
+
+def solve_with_warmstart(model, var_names, probs, num_patrol, num_uav,
+                         time_limit=60, verbose=False):
     """
-    使用 GNN 预测值作为热启动求解
-
-    Args:
-        model: gurobipy.Model
-        var_names: 变量名列表
-        predictions: 预测值数组
-        time_limit: 求解时间上限
-        verbose: 是否输出 Gurobi 日志
-    Returns:
-        dict: 包含状态、目标值、求解时间的字典
+    使用 GNN 预测概率作为热启动求解（top-K 策略）
     """
-    # 设置 MIPStart
-    set_mip_start_from_predictions(model, var_names, predictions)
+    set_mip_start_from_predictions(model, var_names, probs, num_patrol, num_uav)
 
     model.setParam('TimeLimit', time_limit)
     model.setParam('OutputFlag', 1 if verbose else 0)
@@ -212,12 +204,15 @@ def evaluate_warmstart(gnn_model, instance, time_limit=60, device='cpu'):
     gnn_model.eval()
     gnn_model.to(device)
     with torch.no_grad():
-        preds, probs = gnn_model.predict(graph)
+        logits = gnn_model(graph)
+        probs = torch.sigmoid(logits)
 
-    # 热启动求解
+    # 热启动求解（top-K 策略）
     var_names = milp_struct['model_info']['var_names']
     warm_result = solve_with_warmstart(
-        model_ws, var_names, preds.cpu().numpy(), time_limit
+        model_ws, var_names, probs.cpu().numpy(),
+        num_patrol=instance['num_points'], num_uav=num_uav,
+        time_limit=time_limit
     )
     model_ws.dispose()
 
@@ -227,14 +222,14 @@ def evaluate_warmstart(gnn_model, instance, time_limit=60, device='cpu'):
     model_cold.dispose()
 
     # 统计预测
-    preds_np = preds.cpu().numpy()
-    num_ones = int(preds_np.sum())
+    K = instance['num_points'] + 2 * num_uav
+    num_ones = K
 
     return {
         'warm': warm_result,
         'cold': cold_result,
         'pred_stats': {
-            'total_vars': len(preds_np),
+            'total_vars': len(probs),
             'predicted_ones': num_ones,
         },
     }
