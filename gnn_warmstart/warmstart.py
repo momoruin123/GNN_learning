@@ -87,6 +87,9 @@ def set_mip_start_from_predictions(model, var_names, predictions):
     for name, pred_val in zip(var_names, predictions):
         if int(pred_val) == 0:
             continue
+        # 只对 x 变量设 Start（GNN 只训练了这些）
+        if not name.startswith('x['):
+            continue
         if name in var_dict:
             var_dict[name].Start = 1.0
             num_set += 1
