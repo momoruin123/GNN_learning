@@ -3,7 +3,7 @@ GNN 热启动训练配置
 """
 
 # ========== 数据配置 ==========
-TRAIN_DATA_DIR = "./training_data"  # 训练数据目录（data_generation 输出）
+TRAIN_DATA_DIR = "./data/3-6_15-30 "  # 训练数据目录（data_generation 输出）
 MODEL_SAVE_DIR = "./models"         # 模型保存目录
 
 # ========== 训练参数 ==========
