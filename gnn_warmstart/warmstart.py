@@ -112,6 +112,8 @@ def solve_with_warmstart(model, var_names, probs, num_patrol, num_uav,
     model.optimize()
     solve_time = time.time() - t_start
 
+    print(f"  Gurobi 接受 Start 数量: {model.NumStart} (>0 表示生效，=0 表示被拒绝)")
+
     if model.Status == GRB.OPTIMAL:
         status = 'OPTIMAL'
         obj_val = model.ObjVal
