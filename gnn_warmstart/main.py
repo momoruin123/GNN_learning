@@ -83,7 +83,7 @@ def cmd_eval(args):
         instance = raw['instance']
 
         result = evaluate_warmstart(
-            model, instance, time_limit=args.time_limit, device=device
+            model, instance, time_limit=args.time_limit, device='device'
         )
 
         warm_res = result['warm']
