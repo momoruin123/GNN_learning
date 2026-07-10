@@ -13,7 +13,7 @@ class OptModel:
         self.m = gp.Model("uav_ugv_sched")
 
         # 预计算表(数据层算好,这里查)
-        self.travel = inst.build_travel_table()   # (uav_id, from, to) -> 时间
+        self.travel, self.ugv_travel = inst.build_travel_table()   # 两张表:UAV / UGV
 
         # 节点集合:任务 id 列表 + 两个虚拟点
         self.task_ids = [t.id for t in inst.tasks]
