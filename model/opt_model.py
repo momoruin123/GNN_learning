@@ -3,7 +3,6 @@ import gurobipy as gp
 from gurobipy import GRB
 
 
-
 class OptModel:
     def __init__(self, inst):
         self.ins = inst
