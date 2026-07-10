@@ -1,10 +1,7 @@
 from model_skeleton import make_small_instance
+import gurobipy as gp
+from gurobipy import GRB
 
-try:
-    import gurobipy as gp
-    from gurobipy import GRB
-except ImportError:
-    gp = None  # 本地没装也能 import 这个文件,方便看结构
 
 
 class OptModel:
