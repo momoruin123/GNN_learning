@@ -105,10 +105,11 @@ def main():
         print(t)
 
     print("\n=== 预计算的转场时间表 (uav, from, to) -> time ===")
-    travel = inst.build_travel_table()
-    for key, val in travel.items():
+    travel_uav, travel_ugv = inst.build_travel_table()
+    for key, val in travel_uav.items():
         print(f"  UAV{key[0]}: 任务{key[1]} -> 任务{key[2]}  用时 {val:.2f}")
-
+    for key, val in travel_ugv.items():
+        print(f"  UGV{key[0]}: 任务{key[1]} -> 任务{key[2]}  用时 {val:.2f}")
     # 单独取某个字段也很方便
     print("\n=== 访问字段示例 ===")
     a = inst.tasks[0]
