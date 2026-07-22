@@ -1,0 +1,279 @@
+(GNN_learning) PS D:\Python_workspace\GNN_learning> & D:\anaconda3\envs\GNN_learning\python.exe d:/Python_workspace/GNN_learning/model/nocharger/compare_solutions.py
+
+[A] 无热启动(基线)
+Set parameter Username
+Set parameter LicenseID to value 2839468
+Academic license - for non-commercial use only - expires 2027-06-29
+Set parameter TimeLimit to value 120
+Set parameter MIPGap to value 1
+  [A-无热启动] Start加载=0, 已设变量=356
+Gurobi Optimizer version 13.0.2 build v13.0.2rc1 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: 13th Gen Intel(R) Core(TM) i5-13500H, instruction set [SSE2|AVX|AVX2]
+Thread count: 12 physical cores, 16 logical processors, using up to 16 threads
+
+Non-default parameters:
+TimeLimit  120
+MIPGap  1
+
+Optimize a model with 60 rows, 357 columns and 824 nonzeros (Min)
+Model fingerprint: 0x7d6b2800
+Model has 1 linear objective coefficients
+Model has 728 simple general constraints
+  728 INDICATOR
+Variable types: 65 continuous, 292 integer (292 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 2e+03]
+  RHS range        [1e+00, 8e+00]
+  GenCon rhs range [8e+00, 2e+03]
+  GenCon coe range [1e+00, 1e+00]
+
+Presolve added 728 rows and 504 columns
+Presolve time: 0.01s
+Presolved: 788 rows, 861 columns, 2920 nonzeros
+Presolved model has 504 SOS constraint(s)
+Variable types: 569 continuous, 292 integer (292 binary)
+
+Root relaxation: objective 7.581349e+00, 419 iterations, 0.00 seconds (0.00 work units)
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    7.58135    0   19          -    7.58135      -     -    0s
+H    0     0                     256.3988467    7.58135  97.0%     -    0s
+
+Explored 1 nodes (825 simplex iterations) in 0.07 seconds (0.05 work units)
+Thread count was 16 (of 16 available processors)
+
+Solution count 1: 256.399 
+
+Optimal solution found (tolerance 1.00e+00)
+Best objective 2.563988466520e+02, best bound 7.581349177526e+00, gap 97.0431%
+
+  [A-无热启动] makespan=256.40  
+
+[B] 最优解热启动
+Set parameter TimeLimit to value 120
+Set parameter MIPGap to value 1
+  [B-最优热启动] Start加载=0, 已设变量=356
+Gurobi Optimizer version 13.0.2 build v13.0.2rc1 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: 13th Gen Intel(R) Core(TM) i5-13500H, instruction set [SSE2|AVX|AVX2]
+Thread count: 12 physical cores, 16 logical processors, using up to 16 threads
+
+Non-default parameters:
+TimeLimit  120
+MIPGap  1
+
+Optimize a model with 60 rows, 357 columns and 824 nonzeros (Min)
+Model fingerprint: 0x1d9321cf
+Model has 1 linear objective coefficients
+Model has 728 simple general constraints
+  728 INDICATOR
+Variable types: 65 continuous, 292 integer (292 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 2e+03]
+  RHS range        [1e+00, 8e+00]
+  GenCon rhs range [8e+00, 2e+03]
+  GenCon coe range [1e+00, 1e+00]
+
+Warning: Completing partial solution with 272 unfixed non-continuous variables out of 292
+User MIP start produced solution with objective 256.399 (0.00s)
+Loaded user MIP start with objective 256.399
+
+Presolve added 728 rows and 504 columns
+Presolve time: 0.01s
+Presolved: 788 rows, 861 columns, 2920 nonzeros
+Presolved model has 504 SOS constraint(s)
+Variable types: 569 continuous, 292 integer (292 binary)
+
+Explored 0 nodes (0 simplex iterations) in 0.01 seconds (0.02 work units)
+Thread count was 16 (of 16 available processors)
+
+Solution count 1: 256.399 
+
+Optimal solution found (tolerance 1.00e+00)
+Best objective 2.563988466520e+02, best bound 7.581349177526e+00, gap 97.0431%
+
+  [B-最优热启动] makespan=256.40  
+
+[C] 贪心热启动
+Set parameter TimeLimit to value 120
+Set parameter MIPGap to value 1
+  [C-贪心热启动] Start加载=0, 已设变量=356
+Gurobi Optimizer version 13.0.2 build v13.0.2rc1 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: 13th Gen Intel(R) Core(TM) i5-13500H, instruction set [SSE2|AVX|AVX2]
+Thread count: 12 physical cores, 16 logical processors, using up to 16 threads
+
+Non-default parameters:
+TimeLimit  120
+MIPGap  1
+
+Optimize a model with 60 rows, 357 columns and 824 nonzeros (Min)
+Model fingerprint: 0xbaf75b8c
+Model has 1 linear objective coefficients
+Model has 728 simple general constraints
+  728 INDICATOR
+Variable types: 65 continuous, 292 integer (292 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 2e+03]
+  RHS range        [1e+00, 8e+00]
+  GenCon rhs range [8e+00, 2e+03]
+  GenCon coe range [1e+00, 1e+00]
+
+Warning: Completing partial solution with 276 unfixed non-continuous variables out of 292
+User MIP start did not produce a new incumbent solution
+
+Presolve added 728 rows and 504 columns
+Presolve time: 0.01s
+Presolved: 788 rows, 861 columns, 2920 nonzeros
+Presolved model has 504 SOS constraint(s)
+Variable types: 569 continuous, 292 integer (292 binary)
+
+Root relaxation: objective 7.581349e+00, 419 iterations, 0.00 seconds (0.00 work units)
+Another try with MIP start
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    7.58135    0   19          -    7.58135      -     -    0s
+H    0     0                     256.3988467    7.58135  97.0%     -    0s
+
+Explored 1 nodes (825 simplex iterations) in 0.07 seconds (0.05 work units)
+Thread count was 16 (of 16 available processors)
+
+Solution count 1: 256.399 
+
+Optimal solution found (tolerance 1.00e+00)
+Best objective 2.563988466520e+02, best bound 7.581349177526e+00, gap 97.0431%
+
+  [C-贪心热启动] makespan=256.40  
+
+[D] 烂解热启动
+Set parameter TimeLimit to value 120
+Set parameter MIPGap to value 1
+  [D-烂解热启动] Start加载=0, 已设变量=356
+Gurobi Optimizer version 13.0.2 build v13.0.2rc1 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: 13th Gen Intel(R) Core(TM) i5-13500H, instruction set [SSE2|AVX|AVX2]
+Thread count: 12 physical cores, 16 logical processors, using up to 16 threads
+
+Non-default parameters:
+TimeLimit  120
+MIPGap  1
+
+Optimize a model with 60 rows, 357 columns and 824 nonzeros (Min)
+Model fingerprint: 0x8915ca77
+Model has 1 linear objective coefficients
+Model has 728 simple general constraints
+  728 INDICATOR
+Variable types: 65 continuous, 292 integer (292 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 2e+03]
+  RHS range        [1e+00, 8e+00]
+  GenCon rhs range [8e+00, 2e+03]
+  GenCon coe range [1e+00, 1e+00]
+
+Warning: Completing partial solution with 273 unfixed non-continuous variables out of 292
+User MIP start did not produce a new incumbent solution
+User MIP start violates constraint coop_uav_0 by 1.000000000
+
+Presolve added 728 rows and 504 columns
+Presolve time: 0.00s
+Presolved: 788 rows, 861 columns, 2920 nonzeros
+Presolved model has 504 SOS constraint(s)
+Variable types: 569 continuous, 292 integer (292 binary)
+
+Root relaxation: objective 7.581349e+00, 419 iterations, 0.00 seconds (0.00 work units)
+Another try with MIP start
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    7.58135    0   19          -    7.58135      -     -    0s
+H    0     0                     256.3988467    7.58135  97.0%     -    0s
+
+Explored 1 nodes (825 simplex iterations) in 0.06 seconds (0.05 work units)
+Thread count was 16 (of 16 available processors)
+
+Solution count 1: 256.399 
+
+Optimal solution found (tolerance 1.00e+00)
+Best objective 2.563988466520e+02, best bound 7.581349177526e+00, gap 97.0431%
+
+  [D-烂解热启动] makespan=256.40  
+
+[E] 部分最优热启动(随机只给 50%)
+Set parameter TimeLimit to value 120
+Set parameter MIPGap to value 1
+  [E-部分最优50%] Start加载=0, 已设变量=356
+Gurobi Optimizer version 13.0.2 build v13.0.2rc1 (win64 - Windows 11+.0 (26200.2))
+
+CPU model: 13th Gen Intel(R) Core(TM) i5-13500H, instruction set [SSE2|AVX|AVX2]
+Thread count: 12 physical cores, 16 logical processors, using up to 16 threads
+
+Non-default parameters:
+TimeLimit  120
+MIPGap  1
+
+Optimize a model with 60 rows, 357 columns and 824 nonzeros (Min)
+Model fingerprint: 0x37b05176
+Model has 1 linear objective coefficients
+Model has 728 simple general constraints
+  728 INDICATOR
+Variable types: 65 continuous, 292 integer (292 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [1e+00, 1e+00]
+  Bounds range     [1e+00, 2e+03]
+  RHS range        [1e+00, 8e+00]
+  GenCon rhs range [8e+00, 2e+03]
+  GenCon coe range [1e+00, 1e+00]
+
+Warning: Completing partial solution with 281 unfixed non-continuous variables out of 292
+User MIP start did not produce a new incumbent solution
+
+Presolve added 728 rows and 504 columns
+Presolve time: 0.01s
+Presolved: 788 rows, 861 columns, 2920 nonzeros
+Presolved model has 504 SOS constraint(s)
+Variable types: 569 continuous, 292 integer (292 binary)
+
+Root relaxation: objective 7.581349e+00, 419 iterations, 0.00 seconds (0.00 work units)
+Another try with MIP start
+
+    Nodes    |    Current Node    |     Objective Bounds      |     Work
+ Expl Unexpl |  Obj  Depth IntInf | Incumbent    BestBd   Gap | It/Node Time
+
+     0     0    7.58135    0   19          -    7.58135      -     -    0s
+H    0     0                     256.3988467    7.58135  97.0%     -    0s
+
+Explored 1 nodes (825 simplex iterations) in 0.06 seconds (0.05 work units)
+Thread count was 16 (of 16 available processors)
+
+Solution count 1: 256.399 
+
+Optimal solution found (tolerance 1.00e+00)
+Best objective 2.563988466520e+02, best bound 7.581349177526e+00, gap 97.0431%
+
+  [E-部分最优50%] makespan=256.40  
+
+============================================================
+  汇总
+============================================================
+实验               makespan    耗时(s)       节点      Gap
+------------------------------------------------
+  A-无热启动             256.40      0.1      1.0    97.0%
+  B-最优热启动            256.40      0.0      0.0    97.0%
+  C-贪心热启动            256.40      0.1      1.0    97.0%
+  D-烂解热启动            256.40      0.1      1.0    97.0%
+  E-部分最优50%          256.40      0.1      1.0    97.0%
