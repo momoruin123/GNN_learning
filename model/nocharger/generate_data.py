@@ -182,6 +182,7 @@ def main():
     print(f"  数据生成  |  输出: {out_dir}")
     print(f"  算例数: {N_SAMPLES}  |  进程: {N_WORKERS}")
     print(f"=" * 55)
+    t_start = time.time()
 
     # 1. 生成所有实例
     print(f"\n[1/3] 生成 {N_SAMPLES} 个实例...")
@@ -195,6 +196,7 @@ def main():
     print(f"[2/3] 并行求解 ({N_WORKERS} workers, 边跑边存)...")
     t0 = time.time()
     solved, failed, skipped = 0, 0, 0
+    err_count = {}
     summary = []
 
     with Pool(N_WORKERS) as pool:
@@ -202,7 +204,8 @@ def main():
             seed = r.get("seed", -1)
             if "error" in r:
                 failed += 1
-                print(f"  X seed={seed} {r['error']}")
+                reason = r["error"][:40]
+                err_count[reason] = err_count.get(reason, 0) + 1
                 continue
 
             fname = f"data_{seed:06d}.pkl"
@@ -235,7 +238,41 @@ def main():
     print(f"\n保存到 {out_dir}/")
     print(f"  成功: {solved}  失败/无解: {failed}"
           + (f"  跳过: {skipped}" if skipped else ""))
-    print(f"  总耗时: {time.time() - t0:.0f}s")
+    print(f"  总耗时: {time.time() - t_start:.0f}s")
+
+    # 4. 写运行日志
+    total_elapsed = time.time() - t_start
+    ms_list = [s["makespan"] for s in summary if "makespan" in s]
+    log_path = os.path.join(out_dir, "run.log")
+    with open(log_path, "w") as f:
+        f.write(f"=== 数据生成运行日志 ===\n")
+        f.write(f"开始时间:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"总耗时:     {total_elapsed:.0f}s\n")
+        f.write(f"工作进程:   {N_WORKERS}\n")
+        f.write(f"时间限制:   {TIME_LIMIT}s/实例\n")
+        f.write(f"MIP gap:    {MIP_GAP}\n\n")
+        f.write(f"--- 结果统计 ---\n")
+        f.write(f"总算例:     {N_SAMPLES}\n")
+        f.write(f"成功:       {solved}\n")
+        f.write(f"失败:       {failed}\n")
+        if skipped: f.write(f"跳过(已有): {skipped}\n")
+        f.write(f"成功率:     {solved/(solved+failed)*100:.1f}%" if solved+failed else "N/A")
+        f.write(f"\n\n--- 失败原因 ---\n")
+        for reason, cnt in sorted(err_count.items(), key=lambda x: -x[1]):
+            f.write(f"  {reason:<20} x{cnt}\n")
+        if ms_list:
+            f.write(f"\n--- makespan 统计 ---\n")
+            f.write(f"  min:    {min(ms_list):.1f}\n")
+            f.write(f"  max:    {max(ms_list):.1f}\n")
+            f.write(f"  mean:   {sum(ms_list)/len(ms_list):.1f}\n")
+            f.write(f"  median: {sorted(ms_list)[len(ms_list)//2]:.1f}\n")
+        solve_times = [s.get("solve_time", 0) for s in summary]
+        if solve_times:
+            f.write(f"\n--- 求解时间统计 (s) ---\n")
+            f.write(f"  min:    {min(solve_times):.1f}\n")
+            f.write(f"  max:    {max(solve_times):.1f}\n")
+            f.write(f"  mean:   {sum(solve_times)/len(solve_times):.1f}\n")
+    print(f"  日志: {log_path}")
 
 
 if __name__ == "__main__":
