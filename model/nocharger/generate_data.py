@@ -191,55 +191,51 @@ def main():
         inst, config = generate_diverse_instance(seed)
         instances.append((inst, config, seed))
 
-    # 2. 并行求解
-    print(f"[2/3] 并行求解 ({N_WORKERS} workers)...")
+    # 2. 并行求解,完成一个立刻保存
+    print(f"[2/3] 并行求解 ({N_WORKERS} workers, 边跑边存)...")
     t0 = time.time()
-    with Pool(N_WORKERS) as pool:
-        results_raw = pool.map(_solve_one, instances)
-    print(f"  耗时: {time.time() - t0:.0f}s")
-
-    # 3. 分别保存
-    print(f"[3/3] 保存 (resume={'Y' if RESUME else 'N'})...")
     solved, failed, skipped = 0, 0, 0
     summary = []
-    for r in results_raw:
-        seed = r.get("seed", -1)
-        if "error" in r:
-            failed += 1
-            continue
 
-        fname = f"data_{seed:06d}.pkl"
-        fpath = os.path.join(out_dir, fname)
+    with Pool(N_WORKERS) as pool:
+        for r in pool.imap_unordered(_solve_one, instances):
+            seed = r.get("seed", -1)
+            if "error" in r:
+                failed += 1
+                print(f"  X seed={seed} {r['error']}")
+                continue
 
-        # 断点续传
-        if RESUME and os.path.exists(fpath):
-            skipped += 1
+            fname = f"data_{seed:06d}.pkl"
+            fpath = os.path.join(out_dir, fname)
+
+            if RESUME and os.path.exists(fpath):
+                skipped += 1
+                solved += 1
+                continue
+
             solved += 1
-            continue
+            with open(fpath, "wb") as f:
+                pickle.dump(r, f, protocol=pickle.HIGHEST_PROTOCOL)
 
-        solved += 1
-        with open(fpath, "wb") as f:
-            pickle.dump(r, f, protocol=pickle.HIGHEST_PROTOCOL)
+            summary.append({
+                "seed": seed, "config": r["config"],
+                "makespan": r["makespan"],
+                "solve_time": r["solve_time"], "gap": r["gap"],
+                "route_uav": r["route_uav"],
+            })
+            print(f"  V seed={seed:6d}  ms={r['makespan']:.1f}"
+                  f"  [{solved}/{N_SAMPLES}]")
 
-        # 摘要存 json(不存完整变量,省空间)
-        summary.append({
-            "seed": seed,
-            "config": r["config"],
-            "makespan": r["makespan"],
-            "solve_time": r["solve_time"],
-            "gap": r["gap"],
-            "route_uav": r["route_uav"],
-        })
-
-    # 汇总 json
+    # 3. 写汇总 json
+    print(f"\n[3/3] 保存 summary.json ...")
     sm_path = os.path.join(out_dir, "summary.json")
     with open(sm_path, "w") as f:
         json.dump(summary, f, indent=2)
 
     print(f"\n保存到 {out_dir}/")
     print(f"  成功: {solved}  失败/无解: {failed}"
-          + (f"  跳过已存在: {skipped}" if skipped else ""))
-    print(f"  data_*.pkl × {solved}  +  summary.json")
+          + (f"  跳过: {skipped}" if skipped else ""))
+    print(f"  总耗时: {time.time() - t0:.0f}s")
 
 
 if __name__ == "__main__":
