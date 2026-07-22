@@ -20,13 +20,12 @@ from core.entities import UAV, UGV, Task, Instance
 
 # ====================== 配置 ======================
 CONFIG_GROUPS = [
-    ("XS",  (2, 2),  (0, 1),  (3, 5),   30.0),
-    ("S",   (2, 3),  (0, 1),  (5, 10),  50.0),
-    ("M",   (3, 5),  (1, 2),  (10, 18), 100.0),
-    ("L",   (5, 8),  (1, 3),  (18, 30), 150.0),
+    ("S",   (2, 3),  (1, 2),  (3, 5),  50.0),
+    ("M",   (3, 5),  (1, 2),  (5, 7),  100.0),
+    ("L",   (5, 8),  (2, 3),  (7, 10), 150.0),
 ]
 
-N_SAMPLES = 200
+N_SAMPLES = 2
 TIME_LIMIT = 120
 MIP_GAP = 0.01
 RNG_SEED = 42
@@ -42,7 +41,7 @@ def generate_diverse_instance(seed):
     n_uav = rng.randint(n_uav_lo, n_uav_hi)
     n_ugv = rng.randint(n_ugv_lo, n_ugv_hi)
     n_task = rng.randint(n_task_lo, n_task_hi)
-    e_full = area * n_task * 3.0
+    e_full = area * 2
 
     inst = Instance()
     inst.uavs = [
