@@ -31,6 +31,7 @@ TIME_LIMIT = 120
 MIP_GAP = 0.01
 RNG_SEED = 42
 N_WORKERS = max(1, cpu_count() // 2)
+RESUME = True              # 断点续传:已有 .pkl 则跳过
 
 
 # ====================== 实例生成 ======================
@@ -172,8 +173,8 @@ def _solve_one(args):
 
 # ====================== 主函数 ======================
 def main():
-    # 日期标签目录
-    date_tag = datetime.now().strftime("%Y%m%d")
+    # 日期标签目录(精确到秒,每次运行独立)
+    date_tag = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_dir = os.path.join("data", date_tag)
     os.makedirs(out_dir, exist_ok=True)
 
@@ -198,19 +199,25 @@ def main():
     print(f"  耗时: {time.time() - t0:.0f}s")
 
     # 3. 分别保存
-    print(f"[3/3] 保存...")
-    solved, failed = 0, 0
+    print(f"[3/3] 保存 (resume={'Y' if RESUME else 'N'})...")
+    solved, failed, skipped = 0, 0, 0
     summary = []
     for r in results_raw:
         seed = r.get("seed", -1)
         if "error" in r:
             failed += 1
             continue
-        solved += 1
 
-        # 每个算例存一个 .pkl
         fname = f"data_{seed:06d}.pkl"
         fpath = os.path.join(out_dir, fname)
+
+        # 断点续传
+        if RESUME and os.path.exists(fpath):
+            skipped += 1
+            solved += 1
+            continue
+
+        solved += 1
         with open(fpath, "wb") as f:
             pickle.dump(r, f, protocol=pickle.HIGHEST_PROTOCOL)
 
@@ -230,7 +237,8 @@ def main():
         json.dump(summary, f, indent=2)
 
     print(f"\n保存到 {out_dir}/")
-    print(f"  成功: {solved}  失败/无解: {failed}")
+    print(f"  成功: {solved}  失败/无解: {failed}"
+          + (f"  跳过已存在: {skipped}" if skipped else ""))
     print(f"  data_*.pkl × {solved}  +  summary.json")
 
 
